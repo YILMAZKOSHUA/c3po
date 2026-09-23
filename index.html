@@ -256,7 +256,15 @@
 
   /* Trend chart */
   .chart svg text { font-family: var(--f-mono); }
-  .chart .grp { cursor: pointer; }
+  .m-nav { align-items: center; }
+  .m-nav .today-btn {
+    width: auto; height: 32px; padding: 0 12px; border-radius: 999px; border: none;
+    background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 0.8rem;
+  }
+  .m-nav.small button { width: 32px; height: 32px; }
+  .m-nav.small svg { width: 14px; height: 14px; }
+  .chart-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .chart-head .range { font-family: var(--f-mono); font-size: 0.7rem; color: var(--ink-soft); letter-spacing: 0.03em; }
   .chart-legend { display: flex; gap: 16px; margin-top: 8px; font-size: 0.76rem; color: var(--ink-soft); }
   .chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
   .chart-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
@@ -417,6 +425,15 @@
   }
   .pick-chips button i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
   .pick-chips button.on { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+  .pick-chips button.new-cat { border-style: dashed; border-color: var(--line-strong); background: none; color: var(--accent); font-weight: 600; }
+  .newcat-edit { display: inline-flex; align-items: center; gap: 6px; flex: 1 1 100%; }
+  .newcat-edit input {
+    flex: 1; min-width: 0; padding: 8px 12px; border-radius: 999px; border: 1.5px solid var(--accent);
+    background: var(--surface); font-size: 16px;
+  }
+  .newcat-edit input:focus { outline: none; }
+  .pick-chips .newcat-edit button { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+  .pick-chips .newcat-edit button.cancel { background: var(--surface-2); color: var(--ink-soft); border-color: var(--line); }
   .att-row { display: flex; gap: 10px; flex-wrap: wrap; }
   .att {
     position: relative; width: 74px; height: 92px; border-radius: 8px; overflow: hidden; background: var(--surface-2);
@@ -558,6 +575,7 @@
       <div class="month-switch">
         <div class="m-label" id="m-label"><small>Monat</small>—</div>
         <div class="m-nav">
+          <button class="today-btn" id="m-today" hidden>Heute</button>
           <button id="m-prev" aria-label="Vorheriger Monat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
           <button id="m-next" aria-label="Nächster Monat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
         </div>
@@ -580,8 +598,15 @@
       <div class="sec-head"><h2>Ausgaben nach Kategorie</h2><span class="sub" id="cat-sub"></span></div>
       <div class="card" id="cat-card"></div>
 
-      <div class="sec-head"><h2>Sechs Monate</h2><span class="sub">tippen zum Wechseln</span></div>
+      <div class="sec-head"><h2>Sechs Monate</h2></div>
       <div class="card chart">
+        <div class="chart-head">
+          <span class="range" id="t-range"></span>
+          <div class="m-nav small">
+            <button id="t-prev" aria-label="Einen Monat zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+            <button id="t-next" aria-label="Einen Monat vor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+          </div>
+        </div>
         <div id="trend"></div>
         <div class="chart-legend"><span><i style="background:var(--income)"></i>Einnahmen</span><span><i style="background:var(--expense)"></i>Ausgaben</span></div>
       </div>
@@ -722,6 +747,7 @@
       <div class="set-box">
         <ol>
           <li>Diese App am Mac im Browser öffnen (gleicher Link).</li>
+          <li><b>Sichern am Mac:</b> In Chrome/Edge fragt die App nach dem Speicherort – dort iCloud Drive wählen. In Safari landet die Datei in „Downloads“; unter <b>Safari → Einstellungen → Allgemein → Ort für geladene Dateien</b> einen iCloud-Drive-Ordner wählen, dann geht jede Sicherung automatisch dorthin.</li>
           <li><b>Importieren</b> → die .zip aus iCloud Drive wählen.</li>
           <li><b>Zusammenführen</b> wählen: neue Buchungen und Belege kommen dazu, nichts Vorhandenes geht verloren.</li>
         </ol>
@@ -1107,7 +1133,8 @@
     $("h-out").textContent = euro(m.exp);
     $("h-net").textContent = euroSigned(m.inc - m.exp);
     $("m-label").innerHTML = "<small>" + (selMonth === monthOf(todayISO()) ? "Aktueller Monat" : "Rückblick") + "</small>" + esc(monthName(selMonth));
-    $("m-next").disabled = selMonth >= monthOf(todayISO());
+    var atNow = selMonth >= monthOf(todayISO());
+    $("m-next").disabled = atNow; $("t-next").disabled = atNow; $("m-today").hidden = atNow;
 
     // Belegquote
     var q = $("quota");
@@ -1187,9 +1214,7 @@
     });
     svg += "</svg>";
     $("trend").innerHTML = svg;
-    Array.prototype.forEach.call($("trend").querySelectorAll(".grp"), function (g) {
-      g.addEventListener("click", function () { selMonth = g.getAttribute("data-mk"); renderHome(); });
-    });
+    $("t-range").textContent = monthName(months[0], { month: "short" }).replace(".", "") + " – " + monthName(months[5], { month: "short", year: "numeric" }).replace(".", "");
   }
 
   function renderTxFilters() {
@@ -1383,8 +1408,9 @@
   });
 
   var confirmResolve = null;
-  function askConfirm(title, text, yesLabel) {
+  function askConfirm(title, text, yesLabel, neutral) {
     $("cf-title").textContent = title; $("cf-text").textContent = text; $("cf-yes").textContent = yesLabel || "Löschen";
+    $("cf-yes").className = "btn " + (neutral ? "primary" : "danger-solid");
     openSheet("cf-wrap");
     return new Promise(function (res) { confirmResolve = res; });
   }
@@ -1406,9 +1432,39 @@
     if (!cats.some(function (c) { return c.id === txCat; })) txCat = cats.length ? cats[0].id : null;
     $("tx-cats").innerHTML = cats.map(function (c) {
       return '<button type="button" data-pick="' + c.id + '" class="' + (c.id === txCat ? "on" : "") + '"><i style="background:' + catColor(c) + '"></i>' + esc(c.name) + "</button>";
-    }).join("");
+    }).join("") + '<button type="button" class="new-cat" id="tx-newcat">+ Neue Kategorie</button>';
     Array.prototype.forEach.call($("tx-cats").querySelectorAll("[data-pick]"), function (b) {
       b.onclick = function () { txCat = b.getAttribute("data-pick"); setType(txType); };
+    });
+    $("tx-newcat").onclick = startNewCategory;
+  }
+  // Neue Kategorie direkt beim Buchen anlegen – landet automatisch auch unter Konten → Kategorien
+  function startNewCategory() {
+    var btn = $("tx-newcat");
+    var box = document.createElement("span");
+    box.className = "newcat-edit";
+    box.innerHTML = '<input type="text" id="tx-newcat-name" placeholder="' + (txType === "income" ? "z. B. Workshops" : "z. B. Versicherungen") + '" autocomplete="off" aria-label="Name der neuen Kategorie">' +
+      '<button type="button" class="cancel" id="tx-newcat-cancel" aria-label="Abbrechen">✕</button><button type="button" id="tx-newcat-ok">Anlegen</button>';
+    btn.replaceWith(box);
+    var input = $("tx-newcat-name");
+    input.focus();
+    function commit() {
+      var name = input.value.trim();
+      if (!name) { input.focus(); return; }
+      var existing = state.categories.filter(function (c) { return c.type === txType && c.name.toLowerCase() === name.toLowerCase(); })[0];
+      if (existing) { txCat = existing.id; toast("„" + existing.name + "“ gibt es schon – ausgewählt."); }
+      else {
+        var c = { id: "cat-" + uid(), name: name, type: txType };
+        state.categories.push(c); save(); renderAccounts();
+        txCat = c.id; toast("Kategorie „" + name + "“ angelegt");
+      }
+      setType(txType);
+    }
+    $("tx-newcat-ok").onclick = commit;
+    $("tx-newcat-cancel").onclick = function () { setType(txType); };
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); commit(); }
+      if (e.key === "Escape") { e.stopPropagation(); setType(txType); }
     });
   }
   $("t-exp").onclick = function () { setType("expense"); };
@@ -1651,8 +1707,16 @@
   $("tx-search").addEventListener("input", renderTxList);
   $("tx-acc").addEventListener("change", function () { renderTxFilters(); renderTxList(); });
   Array.prototype.forEach.call($("tx-chips").querySelectorAll("[data-f]"), function (b) { b.onclick = function () { setFilter(b.getAttribute("data-f")); }; });
-  $("m-prev").onclick = function () { selMonth = shiftMonth(selMonth, -1); renderHome(); };
-  $("m-next").onclick = function () { if (selMonth < monthOf(todayISO())) { selMonth = shiftMonth(selMonth, 1); renderHome(); } };
+  function stepMonth(d) {
+    var next = shiftMonth(selMonth, d);
+    if (next > monthOf(todayISO())) return;
+    selMonth = next; renderHome();
+  }
+  $("m-prev").onclick = function () { stepMonth(-1); };
+  $("m-next").onclick = function () { stepMonth(1); };
+  $("t-prev").onclick = function () { stepMonth(-1); };
+  $("t-next").onclick = function () { stepMonth(1); };
+  $("m-today").onclick = function () { selMonth = monthOf(todayISO()); renderHome(); };
 
   // ---------- Konto ----------
   var editAcc = null;
@@ -1853,35 +1917,77 @@
     return "﻿" + [head.join(";")].concat(rows).join("\r\n") + "\r\n";
   }
 
-  function deliver(filename, blob) {
+  function isTouch() { return !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches); }
+  // Echter „Sichern unter …“-Dialog (Chrome/Edge am Mac) – muss direkt beim Tippen geöffnet werden
+  function canPickSaveLocation() { return !IN_FRAME && !isTouch() && typeof window.showSaveFilePicker === "function"; }
+  function pickSaveLocation(filename, mime, ext) {
+    var accept = {}; accept[mime] = ["." + ext];
+    return window.showSaveFilePicker({ suggestedName: filename, types: [{ description: ext.toUpperCase() + "-Datei", accept: accept }] })
+      .catch(function (e) { return e && e.name === "AbortError" ? "cancel" : null; });
+  }
+  // Ergebnis: "picked" | "saved" | "shared" | "download" | false (abgebrochen)
+  function deliver(filename, blob, handle) {
+    if (handle && handle !== "cancel") {
+      return handle.createWritable().then(function (w) { return w.write(blob).then(function () { return w.close(); }); })
+        .then(function () { return "picked"; });
+    }
     return downloadsP.then(function (dl) {
       if (dl) {
-        return dl.save({ filename: filename, data: blob }).then(function () { return true; }, function (e) {
+        return dl.save({ filename: filename, data: blob }).then(function () { return "saved"; }, function (e) {
           if (e && e.code !== "declined") toast("Speichern nicht möglich: " + (e.message || e.code), 4000);
           return false;
         });
       }
-      var touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
       var file = null;
       try { file = new File([blob], filename, { type: blob.type }); } catch (e) {}
-      if (touch && file && navigator.canShare && navigator.canShare({ files: [file] })) {
-        return navigator.share({ files: [file], title: filename }).then(function () { return true; }, function (e) { return !(e && e.name === "AbortError") && fallbackDownload(); });
+      if (isTouch() && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        var share = function () { return navigator.share({ files: [file], title: filename }).then(function () { return "shared"; }); };
+        return share().catch(function (e) {
+          if (e && e.name === "AbortError") return false;
+          if (e && e.name === "NotAllowedError") {
+            // Das Erstellen hat zu lange gedauert – iOS verlangt ein frisches Antippen zum Teilen
+            return askConfirm("Sicherung ist fertig", "Tippe auf „Sichern“ und wähle dann „In Dateien sichern“ → iCloud Drive.", "Sichern", true).then(function (ok) {
+              return ok ? share().catch(function (e2) { return e2 && e2.name === "AbortError" ? false : fallbackDownload(); }) : false;
+            });
+          }
+          return fallbackDownload();
+        });
       }
       return fallbackDownload();
       function fallbackDownload() {
         var url = URL.createObjectURL(blob), a = document.createElement("a");
         a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
-        return true;
+        return "download";
       }
     });
+  }
+  function deliveredMsg(res, what, size) {
+    if (res === "picked") return what + " gespeichert (" + bytes(size) + ")";
+    if (res === "download") return what + " liegt im Ordner „Downloads“ (" + bytes(size) + ")";
+    return what + " erstellt (" + bytes(size) + ")";
   }
 
   var exporting = false;
   function exportZip() {
     if (exporting) return; exporting = true;
     var btn = $("s-export"); btn.disabled = true;
-    toast("Sicherung wird erstellt …", 8000);
+    var zipName = "Buchhaltung_" + todayISO() + ".zip";
+    var handleP = canPickSaveLocation() ? pickSaveLocation(zipName, "application/zip", "zip") : Promise.resolve(null);
+    handleP.then(function (handle) {
+      if (handle === "cancel") return "cancel";
+      toast("Sicherung wird erstellt …", 8000);
+      return buildBackupZip().then(function (zip) {
+        return deliver(zipName, zip, handle).then(function (res) {
+          if (res) { state.meta.lastBackup = new Date().toISOString(); save(false); renderBanners(); renderSettings(); toast(deliveredMsg(res, "Sicherung", zip.size), 4200); }
+          else toast("Sicherung abgebrochen");
+        });
+      });
+    }).catch(function (e) {
+      toast("Sicherung fehlgeschlagen: " + (e && e.message || e), 4200);
+    }).then(function () { exporting = false; btn.disabled = false; });
+  }
+  function buildBackupZip() {
     var files = [], fileMap = {}, used = {}, receiptsMeta = [];
     var sorted = state.transactions.slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
     var jobs = [];
@@ -1899,7 +2005,7 @@
         }));
       });
     });
-    Promise.all(jobs).then(function () {
+    return Promise.all(jobs).then(function () {
       files.sort(function (a, b) { return a.name.localeCompare(b.name); });
       var data = {
         format: "buchhaltung", version: 2, exportedAt: new Date().toISOString(),
@@ -1922,19 +2028,17 @@
         { name: "buchungen.csv", data: buildCsv(fileMap) },
         { name: "LIESMICH.txt", data: readme }
       ].concat(files));
-    }).then(function (zip) {
-      return deliver("Buchhaltung_" + todayISO() + ".zip", zip).then(function (ok) {
-        if (ok) { state.meta.lastBackup = new Date().toISOString(); save(false); renderBanners(); renderSettings(); toast("Sicherung erstellt (" + bytes(zip.size) + ")"); }
-        else toast("Sicherung abgebrochen");
-      });
-    }).catch(function (e) {
-      toast("Sicherung fehlgeschlagen: " + (e && e.message || e), 4200);
-    }).then(function () { exporting = false; btn.disabled = false; });
+    });
   }
   $("s-export").onclick = exportZip;
   $("s-csv").onclick = function () {
-    var fileMap = {};
-    deliver("Buchungen_" + todayISO() + ".csv", new Blob([buildCsv(fileMap)], { type: "text/csv" }));
+    var name = "Buchungen_" + todayISO() + ".csv";
+    var handleP = canPickSaveLocation() ? pickSaveLocation(name, "text/csv", "csv") : Promise.resolve(null);
+    handleP.then(function (handle) {
+      if (handle === "cancel") return;
+      var blob = new Blob([buildCsv({})], { type: "text/csv" });
+      return deliver(name, blob, handle).then(function (res) { if (res) toast(deliveredMsg(res, "Tabelle", blob.size), 4200); });
+    }).catch(function (e) { toast("Export fehlgeschlagen: " + (e && e.message || e), 4200); });
   };
 
   // =====================================================================
