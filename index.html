@@ -473,6 +473,49 @@
   .viewer-bottom button { border: none; border-radius: 12px; padding: 11px 14px; font-weight: 700; background: #fff; color: #111; flex: none; }
   .viewer-nav { display: flex; gap: 8px; }
 
+  /* ---------- Zuschneiden ---------- */
+  .att.img { cursor: pointer; }
+  .att .crop-badge {
+    position: absolute; left: 4px; bottom: 4px; width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(0,0,0,0.6); color: #fff; display: grid; place-items: center; pointer-events: none;
+  }
+  .att .crop-badge svg { width: 12px; height: 12px; }
+  .att-hint { font-size: 0.74rem; color: var(--ink-faint); }
+  .cropper { position: fixed; inset: 0; z-index: 85; background: #0B0C0F; color: #fff; display: flex; flex-direction: column; }
+  .crop-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px; }
+  .crop-top b { font-size: 0.95rem; }
+  .crop-top button { border: none; border-radius: 11px; padding: 9px 14px; font-weight: 700; font-size: 0.9rem; }
+  .crop-top .c-cancel { background: rgba(255,255,255,0.12); color: #fff; }
+  .crop-top .c-ok { background: #8FA1FF; color: #0E1433; }
+  .crop-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 22px; touch-action: none; }
+  .crop-frame { position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .crop-frame canvas { display: block; width: 100%; height: 100%; }
+  .crop-box {
+    position: absolute; border: 1.5px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,0.58); cursor: move; touch-action: none;
+    background:
+      linear-gradient(to right, transparent calc(33.33% - 0.5px), rgba(255,255,255,0.35) calc(33.33% - 0.5px) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px) calc(66.66% - 0.5px), rgba(255,255,255,0.35) calc(66.66% - 0.5px) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)),
+      linear-gradient(to bottom, transparent calc(33.33% - 0.5px), rgba(255,255,255,0.35) calc(33.33% - 0.5px) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px) calc(66.66% - 0.5px), rgba(255,255,255,0.35) calc(66.66% - 0.5px) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px));
+  }
+  .crop-box .h { position: absolute; width: 30px; height: 30px; filter: drop-shadow(0 0 1.5px rgba(0,0,0,0.9)); }
+  .crop-box { outline: 1px solid rgba(0,0,0,0.5); }
+  .crop-box .e { filter: drop-shadow(0 0 1.5px rgba(0,0,0,0.9)); }
+  .crop-box .h.tl { left: -3px; top: -3px; border-left: 4px solid #fff; border-top: 4px solid #fff; }
+  .crop-box .h.tr { right: -3px; top: -3px; border-right: 4px solid #fff; border-top: 4px solid #fff; }
+  .crop-box .h.bl { left: -3px; bottom: -3px; border-left: 4px solid #fff; border-bottom: 4px solid #fff; }
+  .crop-box .h.br { right: -3px; bottom: -3px; border-right: 4px solid #fff; border-bottom: 4px solid #fff; }
+  .crop-box .e { position: absolute; background: #fff; border-radius: 2px; }
+  .crop-box .e::after { content: ""; position: absolute; inset: -14px; }
+  .crop-box .e.t, .crop-box .e.b { left: 50%; width: 34px; height: 4px; margin-left: -17px; }
+  .crop-box .e.t { top: -3px; } .crop-box .e.b { bottom: -3px; }
+  .crop-box .e.l, .crop-box .e.r { top: 50%; width: 4px; height: 34px; margin-top: -17px; }
+  .crop-box .e.l { left: -3px; } .crop-box .e.r { right: -3px; }
+  .crop-bottom { display: flex; justify-content: center; gap: 10px; padding: 10px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .crop-bottom button {
+    display: inline-flex; align-items: center; gap: 7px; border: none; border-radius: 12px; padding: 10px 14px;
+    background: rgba(255,255,255,0.12); color: #fff; font-weight: 600; font-size: 0.86rem;
+  }
+  .crop-bottom svg { width: 18px; height: 18px; }
+
   /* ---------- Toast ---------- */
   .toast {
     position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); z-index: 90;
@@ -613,6 +656,7 @@
     <div class="field">
       <span class="flabel">Belege</span>
       <div class="att-row" id="att-row"></div>
+      <span class="att-hint" id="att-hint" hidden>Foto antippen, um es zuzuschneiden.</span>
     </div>
     <input type="file" id="in-camera" accept="image/*" capture="environment" hidden>
     <input type="file" id="in-files" accept="image/*,application/pdf" multiple hidden>
@@ -747,6 +791,28 @@
   <div class="viewer-bottom">
     <div class="vb-meta"><b class="num" id="v-amt"></b><span id="v-meta"></span></div>
     <button id="v-open">Buchung öffnen</button>
+  </div>
+</div>
+
+<!-- Zuschneiden -->
+<div class="cropper" id="cropper" hidden role="dialog" aria-label="Beleg zuschneiden">
+  <div class="crop-top">
+    <button class="c-cancel" id="c-cancel">Abbrechen</button>
+    <b>Zuschneiden</b>
+    <button class="c-ok" id="c-ok">Übernehmen</button>
+  </div>
+  <div class="crop-stage" id="c-stage">
+    <div class="crop-frame" id="c-frame">
+      <canvas id="c-canvas"></canvas>
+      <div class="crop-box" id="c-box">
+        <i class="h tl" data-h="tl"></i><i class="h tr" data-h="tr"></i><i class="h bl" data-h="bl"></i><i class="h br" data-h="br"></i>
+        <i class="e t" data-h="t"></i><i class="e b" data-h="b"></i><i class="e l" data-h="l"></i><i class="e r" data-h="r"></i>
+      </div>
+    </div>
+  </div>
+  <div class="crop-bottom">
+    <button id="c-rotate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Drehen</button>
+    <button id="c-reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6M4 4v6M20 20h-6M20 20v-6M20 4h-6M20 4v6M4 20h6M4 20v-6"/></svg>Ganzes Foto</button>
   </div>
 </div>
 
@@ -1310,6 +1376,7 @@
   });
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Escape") return;
+    if (!$("cropper").hidden) return closeCropper(null);
     if (!$("viewer").hidden) return closeViewer();
     var open = Array.prototype.filter.call(document.querySelectorAll(".sheet-wrap.open"), function () { return true; });
     if (open.length) closeSheet(open[open.length - 1].id);
@@ -1350,7 +1417,7 @@
   function renderAtts() {
     var row = $("att-row");
     row.innerHTML = atts.map(function (a, i) {
-      return '<div class="att" data-i="' + i + '"' + (a.id ? ' data-thumb="' + a.id + '"' : "") + ">" + (a.url ? '<img alt="" src="' + a.url + '">' : a.pdf ? '<span class="pdf">PDF</span>' : "") + "</div>";
+      return '<div class="att' + (a.pdf ? "" : " img") + '" data-i="' + i + '"' + (a.id ? ' data-thumb="' + a.id + '"' : "") + ">" + (a.url ? '<img alt="" src="' + a.url + '">' : a.pdf ? '<span class="pdf">PDF</span>' : "") + "</div>";
     }).join("") +
       '<button type="button" class="att-add" id="att-cam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Kamera</button>' +
       '<button type="button" class="att-add" id="att-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1.6"/><path d="m20 15-4.5-4.5L6 20"/></svg>Fotos / PDF</button>';
@@ -1361,6 +1428,10 @@
     Array.prototype.forEach.call(row.querySelectorAll(".att"), function (el) {
       var i = +el.getAttribute("data-i");
       el.insertAdjacentHTML("beforeend", '<button type="button" class="x" aria-label="Beleg entfernen">✕</button>');
+      if (el.classList.contains("img")) {
+        el.insertAdjacentHTML("beforeend", '<span class="crop-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg></span>');
+        el.onclick = function () { cropAtt(i); };
+      }
       el.querySelector(".x").onclick = function (e) {
         e.stopPropagation();
         var a = atts.splice(i, 1)[0];
@@ -1369,22 +1440,149 @@
         renderAtts();
       };
     });
+    $("att-hint").hidden = !atts.some(function (a) { return !a.pdf; });
     $("att-cam").onclick = function () { $("in-camera").click(); };
     $("att-file").onclick = function () { $("in-files").click(); };
   }
+  function pushPrepared(p, source) {
+    atts.push({ id: null, prepared: p, source: source || null, url: p.thumb ? URL.createObjectURL(p.thumb) : (p.blob.type.indexOf("image/") === 0 ? URL.createObjectURL(p.blob) : null), pdf: p.blob.type === "application/pdf" });
+  }
+  // fertiges (zugeschnittenes) JPEG → Vorschaubild dazu erzeugen
+  function preparedFromCrop(blob) {
+    return loadImage(blob).then(function (img) { return toJpeg(img, 420, 0.72); }).then(function (thumb) { return { blob: blob, thumb: thumb }; });
+  }
+  function isImageFile(f) { return f.type !== "application/pdf" && !/\.pdf$/i.test(f.name || ""); }
+  // Ein einzelnes Foto → direkt zuschneiden; mehrere → direkt übernehmen (später per Antippen zuschneidbar)
   function addFiles(files) {
     var list = Array.prototype.slice.call(files || []);
     if (!list.length) return;
-    toast(list.length > 1 ? list.length + " Belege werden vorbereitet …" : "Beleg wird vorbereitet …", 1400);
-    Promise.all(list.map(prepareReceipt)).then(function (prepped) {
-      prepped.forEach(function (p) {
-        atts.push({ id: null, prepared: p, url: p.thumb ? URL.createObjectURL(p.thumb) : (p.blob.type.indexOf("image/") === 0 ? URL.createObjectURL(p.blob) : null), pdf: p.blob.type === "application/pdf" });
+    if (list.length === 1 && isImageFile(list[0])) {
+      var f = list[0];
+      openCropper(f).then(function (blob) {
+        if (!blob) return;
+        return preparedFromCrop(blob).then(function (p) { pushPrepared(p, f); renderAtts(); });
+      }, function () {
+        return prepareReceipt(f).then(function (p) { pushPrepared(p, f); renderAtts(); toast("Foto übernommen – Zuschneiden ist bei diesem Format nicht möglich."); });
       });
+      return;
+    }
+    toast(list.length + " Belege werden vorbereitet …", 1400);
+    Promise.all(list.map(function (f) { return prepareReceipt(f).then(function (p) { return [p, f]; }); })).then(function (res) {
+      res.forEach(function (r) { pushPrepared(r[0], isImageFile(r[1]) ? r[1] : null); });
       renderAtts();
     });
   }
+  function cropAtt(i) {
+    var a = atts[i]; if (!a || a.pdf) return;
+    var src = a.source ? Promise.resolve(a.source) : a.prepared ? Promise.resolve(a.prepared.blob) : idbGet("receipts", a.id);
+    src.then(function (blob) {
+      if (!blob) { toast("Belegdatei nicht gefunden."); return; }
+      return openCropper(blob).then(function (out) {
+        if (!out) return;
+        return preparedFromCrop(out).then(function (p) {
+          if (a.id) removedAtts.push(a.id);
+          if (a.url) URL.revokeObjectURL(a.url);
+          atts[i] = { id: null, prepared: p, source: a.source || blob, url: URL.createObjectURL(p.thumb), pdf: false };
+          renderAtts();
+        });
+      });
+    }).catch(function () { toast("Dieses Bild lässt sich hier nicht zuschneiden."); });
+  }
   $("in-camera").onchange = function (e) { addFiles(e.target.files); e.target.value = ""; };
   $("in-files").onchange = function (e) { addFiles(e.target.files); e.target.value = ""; };
+
+  // =====================================================================
+  //  Zuschneiden
+  // =====================================================================
+  var cr = { src: null, base: null, W: 0, H: 0, box: null, resolve: null, drag: null };
+  var CROP_MIN = 36;
+  function scaledCanvas(img, maxDim) {
+    // begrenzt die Arbeitsgröße, damit auch 24/48-MP-Fotos auf dem iPhone in eine Canvas passen
+    var s = Math.min(1, maxDim / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+    var c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round((img.naturalWidth || img.width) * s)); c.height = Math.max(1, Math.round((img.naturalHeight || img.height) * s));
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return c;
+  }
+  function openCropper(blob) {
+    return loadImage(blob).then(function (img) {
+      cr.base = scaledCanvas(img, 3200); cr.src = cr.base;
+      $("cropper").hidden = false;
+      cropLayout(true);
+      return new Promise(function (res) { cr.resolve = res; });
+    });
+  }
+  function cropLayout(resetBox) {
+    var stage = $("c-stage");
+    var aw = stage.clientWidth - 44, ah = stage.clientHeight - 44;
+    var s = Math.min(aw / cr.src.width, ah / cr.src.height);
+    var W = Math.max(40, Math.floor(cr.src.width * s)), H = Math.max(40, Math.floor(cr.src.height * s));
+    var old = { W: cr.W, H: cr.H };
+    cr.W = W; cr.H = H;
+    var f = $("c-frame"); f.style.width = W + "px"; f.style.height = H + "px";
+    var cv = $("c-canvas"), dpr = Math.min(window.devicePixelRatio || 1, 3);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    cv.getContext("2d").drawImage(cr.src, 0, 0, cv.width, cv.height);
+    if (resetBox || !cr.box) cr.box = { l: 0, t: 0, r: W, b: H };
+    else { var kx = W / old.W, ky = H / old.H; cr.box = { l: cr.box.l * kx, t: cr.box.t * ky, r: cr.box.r * kx, b: cr.box.b * ky }; }
+    drawBox();
+  }
+  function drawBox() {
+    var b = cr.box, el = $("c-box");
+    el.style.left = b.l + "px"; el.style.top = b.t + "px"; el.style.width = (b.r - b.l) + "px"; el.style.height = (b.b - b.t) + "px";
+  }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  $("c-frame").addEventListener("pointerdown", function (e) {
+    var h = e.target.getAttribute && e.target.getAttribute("data-h");
+    var mode = h || (e.target.id === "c-box" ? "move" : null);
+    if (!mode) return;
+    e.preventDefault();
+    cr.drag = { mode: mode, x: e.clientX, y: e.clientY, box: Object.assign({}, cr.box), id: e.pointerId };
+    try { $("c-frame").setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  $("c-frame").addEventListener("pointermove", function (e) {
+    var d = cr.drag; if (!d || e.pointerId !== d.id) return;
+    e.preventDefault();
+    var dx = e.clientX - d.x, dy = e.clientY - d.y, b = d.box, n = Object.assign({}, b);
+    if (d.mode === "move") {
+      var w = b.r - b.l, hgt = b.b - b.t;
+      n.l = clamp(b.l + dx, 0, cr.W - w); n.r = n.l + w;
+      n.t = clamp(b.t + dy, 0, cr.H - hgt); n.b = n.t + hgt;
+    } else {
+      if (d.mode.indexOf("l") !== -1) n.l = clamp(b.l + dx, 0, b.r - CROP_MIN);
+      if (d.mode.indexOf("r") !== -1) n.r = clamp(b.r + dx, b.l + CROP_MIN, cr.W);
+      if (d.mode.indexOf("t") !== -1) n.t = clamp(b.t + dy, 0, b.b - CROP_MIN);
+      if (d.mode.indexOf("b") !== -1) n.b = clamp(b.b + dy, b.t + CROP_MIN, cr.H);
+    }
+    cr.box = n; drawBox();
+  });
+  function endDrag() { cr.drag = null; }
+  $("c-frame").addEventListener("pointerup", endDrag);
+  $("c-frame").addEventListener("pointercancel", endDrag);
+  function closeCropper(result) {
+    $("cropper").hidden = true;
+    var r = cr.resolve; cr.resolve = null; cr.src = cr.base = null;
+    if (r) r(result);
+  }
+  $("c-cancel").onclick = function () { closeCropper(null); };
+  $("c-reset").onclick = function () { cr.src = cr.base; cropLayout(true); };
+  $("c-rotate").onclick = function () {
+    var s = cr.src, c = document.createElement("canvas");
+    c.width = s.height; c.height = s.width;
+    var x = c.getContext("2d"); x.translate(c.width, 0); x.rotate(Math.PI / 2); x.drawImage(s, 0, 0);
+    cr.src = c; cropLayout(true);
+  };
+  $("c-ok").onclick = function () {
+    var k = cr.src.width / cr.W, b = cr.box;
+    var sx = Math.round(b.l * k), sy = Math.round(b.t * k), sw = Math.round((b.r - b.l) * k), sh = Math.round((b.b - b.t) * k);
+    var sc = Math.min(1, 2200 / Math.max(sw, sh));
+    var c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(sw * sc)); c.height = Math.max(1, Math.round(sh * sc));
+    var x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
+    x.drawImage(cr.src, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    c.toBlob(function (out) { closeCropper(out); }, "image/jpeg", 0.86);
+  };
+  window.addEventListener("resize", function () { if (!$("cropper").hidden) cropLayout(false); });
 
   function openTxSheet(id) {
     if (!state.accounts.length) { toast("Lege zuerst ein Konto an."); showView("accounts"); openAccSheet(null); return; }
