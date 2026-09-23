@@ -258,11 +258,13 @@
   .chart svg text { font-family: var(--f-mono); }
   .m-nav { align-items: center; }
   .m-nav .today-btn {
-    width: auto; height: 32px; padding: 0 12px; border-radius: 999px; border: none;
-    background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 0.8rem;
+    width: auto; height: 32px; padding: 0 13px; border-radius: 999px; border: 1.5px solid var(--accent);
+    background: var(--surface); color: var(--accent); font-weight: 700; font-size: 0.8rem;
   }
+  .m-nav .today-btn.on { background: var(--accent); color: var(--accent-ink); cursor: default; }
   .m-nav.small button { width: 32px; height: 32px; }
   .m-nav.small svg { width: 14px; height: 14px; }
+  .m-nav.small .today-btn { width: auto; }
   .chart-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
   .chart-head .range { font-family: var(--f-mono); font-size: 0.7rem; color: var(--ink-soft); letter-spacing: 0.03em; }
   .chart-legend { display: flex; gap: 16px; margin-top: 8px; font-size: 0.76rem; color: var(--ink-soft); }
@@ -575,7 +577,7 @@
       <div class="month-switch">
         <div class="m-label" id="m-label"><small>Monat</small>—</div>
         <div class="m-nav">
-          <button class="today-btn" id="m-today" hidden>Heute</button>
+          <button class="today-btn" id="m-today" aria-pressed="false">Heute</button>
           <button id="m-prev" aria-label="Vorheriger Monat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
           <button id="m-next" aria-label="Nächster Monat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
         </div>
@@ -604,6 +606,7 @@
           <span class="range" id="t-range"></span>
           <div class="m-nav small">
             <button id="t-prev" aria-label="Einen Monat zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+            <button class="today-btn" id="t-today" aria-pressed="false">Heute</button>
             <button id="t-next" aria-label="Einen Monat vor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
           </div>
         </div>
@@ -1134,7 +1137,8 @@
     $("h-net").textContent = euroSigned(m.inc - m.exp);
     $("m-label").innerHTML = "<small>" + (selMonth === monthOf(todayISO()) ? "Aktueller Monat" : "Rückblick") + "</small>" + esc(monthName(selMonth));
     var atNow = selMonth >= monthOf(todayISO());
-    $("m-next").disabled = atNow; $("t-next").disabled = atNow; $("m-today").hidden = atNow;
+    $("m-next").disabled = atNow; $("t-next").disabled = atNow;
+    ["m-today", "t-today"].forEach(function (id) { $(id).classList.toggle("on", atNow); $(id).setAttribute("aria-pressed", atNow ? "true" : "false"); });
 
     // Belegquote
     var q = $("quota");
@@ -1716,7 +1720,9 @@
   $("m-next").onclick = function () { stepMonth(1); };
   $("t-prev").onclick = function () { stepMonth(-1); };
   $("t-next").onclick = function () { stepMonth(1); };
-  $("m-today").onclick = function () { selMonth = monthOf(todayISO()); renderHome(); };
+  function goToday() { if (selMonth !== monthOf(todayISO())) { selMonth = monthOf(todayISO()); renderHome(); } }
+  $("m-today").onclick = goToday;
+  $("t-today").onclick = goToday;
 
   // ---------- Konto ----------
   var editAcc = null;
